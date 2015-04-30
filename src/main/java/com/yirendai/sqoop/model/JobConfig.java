@@ -8,8 +8,8 @@ import java.util.Map;
  * @author Li He
  */
 public class JobConfig implements Config{
-    private long from;
-    private long to;
+    private String from;
+    private String to;
     private String name;
     private String creationUser;
 
@@ -17,19 +17,19 @@ public class JobConfig implements Config{
     private Map<String, String> toItems = new HashMap<String, String>();
     private Map<String, String> driverItems = new HashMap<String, String>();
 
-    public long getFrom() {
+    public String getFrom() {
         return from;
     }
 
-    public void setFrom(long from) {
+    public void setFrom(String from) {
         this.from = from;
     }
 
-    public long getTo() {
+    public String getTo() {
         return to;
     }
 
-    public void setTo(long to) {
+    public void setTo(String to) {
         this.to = to;
     }
 

@@ -59,10 +59,10 @@ public final class PropertyConfigurer {
             is = configClass.getResourceAsStream(custom_config);
             if (is != null) {
                 config.load(is);
-                log.info("Avro RPC Client: Successfully loaded custom properties file from classpath");
+                log.info("Property Loader: Successfully loaded custom properties file from classpath");
                 log.info("File path : " + configClass.getResource(custom_config).getFile());
             } else {
-                log.info("Avro RPC Client: No custom properties file found in classpath");
+                log.info("Property Loader: No custom properties file found in classpath");
             }
 
 
@@ -70,7 +70,7 @@ public final class PropertyConfigurer {
 
             // some debugging for those that want it
             if (log.isDebugEnabled()) {
-                log.debug("Avro RPC Client looks like this ...");
+                log.debug("Property Loader looks like this ...");
 
                 String key = null;
                 Enumeration keys = config.keys();

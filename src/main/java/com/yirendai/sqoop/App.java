@@ -23,8 +23,11 @@ public class App {
         }
 
         if (filePath == null || "".equals(filePath)) {
+            log.info("You did not pass the custom path of *.conf file, so using the default path.");
             filePath = PropertyConfigurer.getProperty("workload.file");
         }
+
+        log.info("Using configuration file: '" + filePath + "'");
 
         List<Config> configs;
         try {
@@ -35,7 +38,7 @@ public class App {
         }
 
         if (configs == null || configs.isEmpty()) {
-            log.info("No Workload Content has been parsed. Please Check if your file is empty.");
+            log.warn("No Workload Content has been parsed. Please Check if your file is empty.");
             return;
         }
 

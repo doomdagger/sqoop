@@ -33,8 +33,8 @@ public class WorkloadReader {
     // Config Keys for Job
 
     // common
-    public static final String JOB_CONFIG_FROM_LINK_ID = "jobConfig.fromLinkId";
-    public static final String JOB_CONFIG_TO_LINK_ID = "jobConfig.toLinkId";
+    public static final String JOB_CONFIG_FROM_LINK_NAME = "jobConfig.fromLinkName";
+    public static final String JOB_CONFIG_TO_LINK_NAME = "jobConfig.toLinkName";
     public static final String JOB_CONFIG_NAME = "jobConfig.name";
     public static final String JOB_CONFIG_CREATION_USER = "jobConfig.creationUser";
 
@@ -112,7 +112,7 @@ public class WorkloadReader {
             if (config.containsKey(LINK_CONFIG_CID)) {
                 // it's a link definition
                 configList.add(parseLinkConfig(config));
-            } else if (config.containsKey(JOB_CONFIG_FROM_LINK_ID)) {
+            } else if (config.containsKey(JOB_CONFIG_FROM_LINK_NAME)) {
                 // it's a job definition
                 configList.add(parseJobConfig(config));
             } else {
@@ -143,8 +143,8 @@ public class WorkloadReader {
     private static JobConfig parseJobConfig(Map<String, String> config) {
         JobConfig jobConfig = new JobConfig();
 
-        jobConfig.setFrom(Long.valueOf(config.get(JOB_CONFIG_FROM_LINK_ID)));
-        jobConfig.setTo(Long.valueOf(config.get(JOB_CONFIG_TO_LINK_ID)));
+        jobConfig.setFrom(config.get(JOB_CONFIG_FROM_LINK_NAME));
+        jobConfig.setTo(config.get(JOB_CONFIG_TO_LINK_NAME));
         jobConfig.setName(config.get(JOB_CONFIG_NAME));
         jobConfig.setCreationUser(config.get(JOB_CONFIG_CREATION_USER));
 
