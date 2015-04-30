@@ -96,7 +96,8 @@ public class JobConfig implements Config{
 
     @Override
     public String toString() {
-        return this.getFrom() + "\n" +
+        return "\n" +
+                this.getFrom() + "\n" +
                 this.getTo() + "\n" +
                 this.getName() + "\n" +
                 this.getCreationUser() + "\n" +

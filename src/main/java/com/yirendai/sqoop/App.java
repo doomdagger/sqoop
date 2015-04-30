@@ -1,6 +1,7 @@
 package com.yirendai.sqoop;
 
 import com.yirendai.sqoop.model.Config;
+import com.yirendai.sqoop.model.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -25,7 +26,7 @@ public class App {
             filePath = PropertyConfigurer.getProperty("workload.file");
         }
 
-        List<Config> configs = null;
+        List<Config> configs;
         try {
             configs = WorkloadReader.parseConfig(filePath);
         } catch (IOException e) {
@@ -38,8 +39,14 @@ public class App {
             return;
         }
 
-        //SqoopWorker worker = new SqoopWorker();
+        SqoopWorker worker = new SqoopWorker();
 
-
+        List<Pair> pairs = worker.handleConfigs(configs);
+        // start all jobs
+        for (Pair pair : pairs) {
+            if (pair.getKey().equals("job")) {
+                worker.startJob(pair.getValue());
+            }
+        }
     }
 }

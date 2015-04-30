@@ -5,10 +5,9 @@ import com.yirendai.sqoop.model.JobConfig;
 import com.yirendai.sqoop.model.LinkConfig;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by lihe on 4/29/15.
@@ -157,7 +156,20 @@ public class WorkloadReader {
         jobConfig.addFromItem(FROM_JOB_CONFIG_SHOULD_CLEAR_STAGE_TABLE, config.get(FROM_JOB_CONFIG_SHOULD_CLEAR_STAGE_TABLE));
         jobConfig.addFromItem(FROM_JOB_CONFIG_COLUMNS, config.get(FROM_JOB_CONFIG_COLUMNS));
 
-        jobConfig.addToItem(TO_JOB_CONFIG_OUTPUT_DIRECTORY, config.get(TO_JOB_CONFIG_OUTPUT_DIRECTORY));
+        // handle date format
+        String directory = config.get(TO_JOB_CONFIG_OUTPUT_DIRECTORY);
+        String parsedDirectory = directory;
+        if (directory != null) {
+            Date date = new Date();
+            Pattern pattern = Pattern.compile("\\{([^}]+)\\}");
+            Matcher matcher = pattern.matcher(directory);
+            int endIndex = 0;
+            while(matcher.find(endIndex)) {
+                parsedDirectory = parsedDirectory.replace(matcher.group(0), Utils.parseDate(date, matcher.group(1)));
+                endIndex = matcher.end(0);
+            }
+        }
+        jobConfig.addToItem(TO_JOB_CONFIG_OUTPUT_DIRECTORY, parsedDirectory);
 
         jobConfig.addDriverItem(THROTTLING_CONFIG_NUM_EXTRACTORS, config.get(THROTTLING_CONFIG_NUM_EXTRACTORS));
         jobConfig.addDriverItem(THROTTLING_CONFIG_NUM_LOADERS, config.get(THROTTLING_CONFIG_NUM_LOADERS));
