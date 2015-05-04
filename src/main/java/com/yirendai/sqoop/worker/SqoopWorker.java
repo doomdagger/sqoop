@@ -12,6 +12,7 @@ import org.apache.sqoop.model.*;
 import org.apache.sqoop.submission.counter.Counter;
 import org.apache.sqoop.submission.counter.CounterGroup;
 import org.apache.sqoop.submission.counter.Counters;
+import org.apache.sqoop.validation.Message;
 import org.apache.sqoop.validation.Status;
 
 import java.util.ArrayList;
@@ -64,40 +65,53 @@ public class SqoopWorker {
     public Pair handleLinkConfig(LinkConfig linkConfig) {
         // find the link by name
         MLink link = this.getLink(linkConfig.getName());
-        Status status;
+        boolean update;
         if (link != null) {
             // we have the link with this name
             // try to do the update link
             log.info("The Link with the given name '" + linkConfig.getName() + "' exists. Try updating...");
+            update = true;
             if (link.getConnectorId() != linkConfig.getCid()) {
                 throw new RuntimeException("The Link with name '"
                         + linkConfig.getName() + " is already exists, albeit having " +
                         "different connector id. Is this a typo? If not, please change your link name in order to create new one.");
             }
-            MLinkConfig mlc = link.getConnectorLinkConfig();
-            // fill in the link config values
-            for (Map.Entry<String, String> entry : linkConfig.getItems().entrySet()) {
-                mlc.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            status = this.client.updateLink(link);
         } else {
             // we don't have the link with this name
             // try to create a new one
             log.info("The Link with the given name '" + linkConfig.getName() + "' does not exist. Try creating one...");
+            update = false;
             link = this.client.createLink(linkConfig.getCid());
             link.setName(linkConfig.getName());
             link.setCreationUser(linkConfig.getCreationUser());
-            MLinkConfig mlc = link.getConnectorLinkConfig();
-            // fill in the link config values
-            for (Map.Entry<String, String> entry : linkConfig.getItems().entrySet()) {
-                mlc.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            status = this.client.saveLink(link);
         }
-        if(status.canProceed()) {
-            log.info("Finished. The Link with Link Id : " + link.getPersistenceId());
+        MLinkConfig mlc = link.getConnectorLinkConfig();
+        // fill in the link config values
+        for (Map.Entry<String, String> entry : linkConfig.getItems().entrySet()) {
+            mlc.getStringInput(entry.getKey()).setValue(entry.getValue());
+        }
+        // first validate
+        if (link.getValidationStatus().canProceed()) {
+            Status submitStatus;
+            if (update) {
+                submitStatus = this.client.updateLink(link);
+            } else {
+                submitStatus = this.client.saveLink(link);
+            }
+            if(submitStatus.canProceed()) {
+                log.info("Finished. The Link with Link Id : " + link.getPersistenceId());
+            } else {
+                throw new RuntimeException("Something went wrong when submitting the link '" + link.getName() + "'. Please refer server log for details");
+            }
         } else {
-            throw new RuntimeException("Something went wrong dealing the link '" + link.getName() + "'");
+            log.error("Something went wrong dealing the link '" + link.getName() + "'");
+            for (Message message : link.getValidationMessages()) {
+                if (message.getStatus().canProceed()) {
+                    continue;
+                }
+                log.error(message.getMessage());
+            }
+            throw new RuntimeException("Following Operations cannot proceed with the validation errors above.");
         }
         return new Pair("link", link.getPersistenceId());
     }
@@ -105,38 +119,23 @@ public class SqoopWorker {
     public Pair handleJobConfig(JobConfig jobConfig) {
         // find the job by name
         MJob job = this.getJob(jobConfig.getName());
-        Status status;
-
+        boolean update;
         if (job != null) {
             // we have the job with this name
             // try to do the update job
             log.info("The Link with the given name '" + jobConfig.getName() + "' exists. Try updating...");
+            update = true;
             if (job.getLinkId(Direction.FROM) != this.getLinkIdByName(jobConfig.getFrom())
                     || job.getLinkId(Direction.TO) != this.getLinkIdByName(jobConfig.getTo())) {
                 throw new RuntimeException(
                         "The Job with same name exists, albeit having different link ids. Or the Link Name you given does not exist. " +
                                 "Is this a typo? If not, please change your link name in order to create new one.");
             }
-            // set the "FROM" link job config values
-            MFromConfig fromJobConfig = job.getFromJobConfig();
-            for (Map.Entry<String, String> entry : jobConfig.getFromItems().entrySet()) {
-                fromJobConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            // set the "TO" link job config values
-            MToConfig toJobConfig = job.getToJobConfig();
-            for (Map.Entry<String, String> entry : jobConfig.getToItems().entrySet()) {
-                toJobConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            // set the driver config values
-            MDriverConfig driverConfig = job.getDriverConfig();
-            for (Map.Entry<String, String> entry : jobConfig.getDriverItems().entrySet()) {
-                driverConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            status = this.client.updateJob(job);
         } else {
             // we don't have the link with this name
             // try to create a new one
             log.info("The Job with the given name '" + jobConfig.getName() + "' does not exist. Try creating one...");
+            update = false;
             //Creating dummy job object
             long fromLinkId = this.getLinkIdByName(jobConfig.getFrom());// for jdbc connector
             long toLinkId = this.getLinkIdByName(jobConfig.getTo()); // for HDFS connector
@@ -148,28 +147,47 @@ public class SqoopWorker {
             job = client.createJob(fromLinkId, toLinkId);
             job.setName(jobConfig.getName());
             job.setCreationUser(jobConfig.getCreationUser());
-            // set the "FROM" link job config values
-            MFromConfig fromJobConfig = job.getFromJobConfig();
-            for (Map.Entry<String, String> entry : jobConfig.getFromItems().entrySet()) {
-                fromJobConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            // set the "TO" link job config values
-            MToConfig toJobConfig = job.getToJobConfig();
-            for (Map.Entry<String, String> entry : jobConfig.getToItems().entrySet()) {
-                toJobConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            // set the driver config values
-            MDriverConfig driverConfig = job.getDriverConfig();
-            for (Map.Entry<String, String> entry : jobConfig.getDriverItems().entrySet()) {
-                driverConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
-            }
-            status = this.client.saveJob(job);
         }
-        if(status.canProceed()) {
-            log.info("The Job with Job Id : " + job.getPersistenceId());
+        // set the "FROM" link job config values
+        MFromConfig fromJobConfig = job.getFromJobConfig();
+        for (Map.Entry<String, String> entry : jobConfig.getFromItems().entrySet()) {
+            fromJobConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
+        }
+        // set the "TO" link job config values
+        MToConfig toJobConfig = job.getToJobConfig();
+        for (Map.Entry<String, String> entry : jobConfig.getToItems().entrySet()) {
+            toJobConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
+        }
+        // set the driver config values
+        MDriverConfig driverConfig = job.getDriverConfig();
+        for (Map.Entry<String, String> entry : jobConfig.getDriverItems().entrySet()) {
+            driverConfig.getStringInput(entry.getKey()).setValue(entry.getValue());
+        }
+
+        // first validate
+        if (job.getValidationStatus().canProceed()) {
+            Status submitStatus;
+            if (update) {
+                submitStatus = this.client.updateJob(job);
+            } else {
+                submitStatus = this.client.saveJob(job);
+            }
+            if(submitStatus.canProceed()) {
+                log.info("Finished. The Job with Job Id : " + job.getPersistenceId());
+            } else {
+                throw new RuntimeException("Something went wrong when submitting the job '" + job.getName() + "'. Please refer server log for details");
+            }
         } else {
-            throw new RuntimeException("Something went wrong dealing the job '" + job.getName() + "'");
+            log.error("Something went wrong dealing the job '" + job.getName() + "'");
+            for (Message message : job.getValidationMessages()) {
+                if (message.getStatus().canProceed()) {
+                    continue;
+                }
+                log.error(message.getMessage());
+            }
+            throw new RuntimeException("Following Operations cannot proceed with the validation errors above.");
         }
+
         return new Pair("job", job.getPersistenceId());
     }
 
