@@ -1,4 +1,4 @@
-package com.yirendai.sqoop;
+package com.yirendai.sqoop.common;
 
 import com.yirendai.sqoop.model.Config;
 import com.yirendai.sqoop.model.JobConfig;
@@ -64,7 +64,7 @@ public class WorkloadReader {
         return parse(read(filePath));
     }
 
-    private static List<Map<String, String>> read(String filePath) throws IOException {
+    public static List<Map<String, String>> read(String filePath) throws IOException {
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new FileInputStream(filePath)));
         List<Map<String, String>> configs = new ArrayList<Map<String, String>>();
@@ -89,7 +89,7 @@ public class WorkloadReader {
             }
             if (next) {
                 next = false;
-                config = new HashMap<String, String>();
+                config = new LinkedHashMap<String, String>();
             }
             temp = line.split("=");
             if (temp.length != 2) {
@@ -161,7 +161,7 @@ public class WorkloadReader {
         String parsedDirectory = directory;
         if (directory != null) {
             Date date = new Date();
-            Pattern pattern = Pattern.compile("\\{([^}]+)\\}");
+            Pattern pattern = Pattern.compile("\\[([^\\]]+)\\]");
             Matcher matcher = pattern.matcher(directory);
             int endIndex = 0;
             while(matcher.find(endIndex)) {
@@ -175,6 +175,34 @@ public class WorkloadReader {
         jobConfig.addDriverItem(THROTTLING_CONFIG_NUM_LOADERS, config.get(THROTTLING_CONFIG_NUM_LOADERS));
 
         return jobConfig;
+    }
+
+    public static Map<String, String> parseJob(Map<String, String> jobConfig, Map<String, String> dedicatedValue) {
+        if (!jobConfig.containsKey(JOB_CONFIG_FROM_LINK_NAME)) {
+            throw new RuntimeException("A defined job without from Link Name is invalid!");
+        }
+        Map<String, String> parsedConfig = new LinkedHashMap<String, String>();
+
+        Pattern pattern = Pattern.compile("\\{([^\\}]+)\\}");
+
+        for (Map.Entry<String, String> entry : jobConfig.entrySet()) {
+            String value = jobConfig.get(entry.getKey());
+            String parsedValue = value;
+            Matcher matcher = pattern.matcher(value);
+            int endIndex = 0;
+            while(matcher.find(endIndex)) {
+                String dvalue = dedicatedValue.get(matcher.group(1));
+                if (dvalue == null || "".equals(dvalue)) {
+                    throw new RuntimeException("The dedicated key '" + matcher.group(1) + "' does not exist! " +
+                            "It may be caused by the fact that your input file does not support this dedicated key.");
+                }
+                parsedValue = parsedValue.replace(matcher.group(0), dvalue);
+                endIndex = matcher.end(0);
+            }
+            parsedConfig.put(entry.getKey(), parsedValue);
+        }
+
+        return parsedConfig;
     }
 
 }

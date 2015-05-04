@@ -1,4 +1,4 @@
-package com.yirendai.sqoop;
+package com.yirendai.sqoop.common;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

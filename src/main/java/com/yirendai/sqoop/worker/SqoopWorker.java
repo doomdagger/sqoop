@@ -1,4 +1,4 @@
-package com.yirendai.sqoop;
+package com.yirendai.sqoop.worker;
 
 import com.yirendai.sqoop.model.Config;
 import com.yirendai.sqoop.model.JobConfig;

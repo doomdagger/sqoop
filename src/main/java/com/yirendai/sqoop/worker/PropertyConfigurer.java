@@ -16,7 +16,7 @@
  * directory of this distribution.
  */
 
-package com.yirendai.sqoop;
+package com.yirendai.sqoop.worker;
 
 import java.io.InputStream;
 import java.util.Enumeration;
@@ -49,7 +49,7 @@ public final class PropertyConfigurer {
 
         try {
             // we'll need this to get at our properties files in the classpath
-            Class configClass = Class.forName("com.yirendai.sqoop.PropertyConfigurer");
+            Class configClass = Class.forName("com.yirendai.sqoop.worker.PropertyConfigurer");
 
             // first, lets load our default properties
             InputStream is = configClass.getResourceAsStream(default_config);
