@@ -119,35 +119,26 @@ public class SqoopWorker {
     public Pair handleJobConfig(JobConfig jobConfig) {
         // find the job by name
         MJob job = this.getJob(jobConfig.getName());
-        boolean update;
         if (job != null) {
             // we have the job with this name
-            // try to do the update job
-            log.info("The Link with the given name '" + jobConfig.getName() + "' exists. Try updating...");
-            update = true;
-            if (job.getLinkId(Direction.FROM) != this.getLinkIdByName(jobConfig.getFrom())
-                    || job.getLinkId(Direction.TO) != this.getLinkIdByName(jobConfig.getTo())) {
-                throw new RuntimeException(
-                        "The Job with same name exists, albeit having different link ids. Or the Link Name you given does not exist. " +
-                                "Is this a typo? If not, please change your link name in order to create new one.");
-            }
+            log.info("The Link with the given name '" + jobConfig.getName() + "' exists. Try overwriting...");
+            this.client.deleteJob(job.getPersistenceId());
         } else {
-            // we don't have the link with this name
-            // try to create a new one
             log.info("The Job with the given name '" + jobConfig.getName() + "' does not exist. Try creating one...");
-            update = false;
-            //Creating dummy job object
-            long fromLinkId = this.getLinkIdByName(jobConfig.getFrom());// for jdbc connector
-            long toLinkId = this.getLinkIdByName(jobConfig.getTo()); // for HDFS connector
-
-            if (fromLinkId == -1 || toLinkId == -1) {
-                throw new RuntimeException("Cannot find Link for the Link Name given by Job Configuration.");
-            }
-
-            job = client.createJob(fromLinkId, toLinkId);
-            job.setName(jobConfig.getName());
-            job.setCreationUser(jobConfig.getCreationUser());
         }
+        // try to create a new one
+        //Creating dummy job object
+        long fromLinkId = this.getLinkIdByName(jobConfig.getFrom());// for jdbc connector
+        long toLinkId = this.getLinkIdByName(jobConfig.getTo()); // for HDFS connector
+
+        if (fromLinkId == -1 || toLinkId == -1) {
+            throw new RuntimeException("Cannot find Link for the Link Name given by Job Configuration.");
+        }
+
+        job = client.createJob(fromLinkId, toLinkId);
+        job.setName(jobConfig.getName());
+        job.setCreationUser(jobConfig.getCreationUser());
+
         // set the "FROM" link job config values
         MFromConfig fromJobConfig = job.getFromJobConfig();
         for (Map.Entry<String, String> entry : jobConfig.getFromItems().entrySet()) {
@@ -167,11 +158,7 @@ public class SqoopWorker {
         // first validate
         if (job.getValidationStatus().canProceed()) {
             Status submitStatus;
-            if (update) {
-                submitStatus = this.client.updateJob(job);
-            } else {
-                submitStatus = this.client.saveJob(job);
-            }
+            submitStatus = this.client.saveJob(job);
             if(submitStatus.canProceed()) {
                 log.info("Finished. The Job with Job Id : " + job.getPersistenceId());
             } else {
