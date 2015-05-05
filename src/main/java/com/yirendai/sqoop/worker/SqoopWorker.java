@@ -7,7 +7,6 @@ import com.yirendai.sqoop.model.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.sqoop.client.SqoopClient;
-import org.apache.sqoop.common.Direction;
 import org.apache.sqoop.model.*;
 import org.apache.sqoop.submission.counter.Counter;
 import org.apache.sqoop.submission.counter.CounterGroup;
@@ -92,6 +91,9 @@ public class SqoopWorker {
         }
         // first validate
         if (link.getValidationStatus().canProceed()) {
+            if (!validateConfig(link.getConnectorLinkConfig().getConfigs())) {
+                throw new RuntimeException("Following Operations cannot proceed with the validation errors above.");
+            }
             Status submitStatus;
             if (update) {
                 submitStatus = this.client.updateLink(link);
@@ -157,6 +159,12 @@ public class SqoopWorker {
 
         // first validate
         if (job.getValidationStatus().canProceed()) {
+            if (!validateConfig(job.getFromJobConfig().getConfigs())
+                    || !validateConfig(job.getToJobConfig().getConfigs())
+                    || !validateConfig(job.getDriverConfig().getConfigs())) {
+                throw new RuntimeException("Following Operations cannot proceed with the validation errors above.");
+            }
+
             Status submitStatus;
             submitStatus = this.client.saveJob(job);
             if(submitStatus.canProceed()) {
@@ -248,5 +256,35 @@ public class SqoopWorker {
         if(submission.getExceptionInfo() != null) {
             throw new RuntimeException("Exception info : " + submission.getExceptionInfo());
         }
+    }
+
+    private static boolean validateConfig(List<MConfig> configs) {
+        boolean canProceed = true;
+
+        for (MConfig config : configs) {
+            List<MInput<?>> inputlist = config.getInputs();
+            if (config.getValidationMessages() != null) {
+                canProceed = false;
+                // print every validation message
+                for (Message message : config.getValidationMessages()) {
+                    log.error("Config validation message: " + message.getMessage());
+                }
+            }
+            for (MInput minput : inputlist) {
+                if (minput.getValidationStatus() == Status.WARNING) {
+                    for (Message message : config.getValidationMessages()) {
+                        log.warn("Config Input Validation Warning: " + message.getMessage());
+                    }
+                } else if (minput.getValidationStatus() == Status.ERROR) {
+                    canProceed = false;
+                    // print every validation message
+                    for (Message message : config.getValidationMessages()) {
+                        log.error("Config Input Validation Error: " + message.getMessage());
+                    }
+                }
+            }
+        }
+
+        return canProceed;
     }
 }
