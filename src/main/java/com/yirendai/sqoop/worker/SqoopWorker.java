@@ -264,9 +264,9 @@ public class SqoopWorker {
         for (MConfig config : configs) {
             List<MInput<?>> inputlist = config.getInputs();
             if (config.getValidationMessages() != null) {
-                canProceed = false;
                 // print every validation message
                 for (Message message : config.getValidationMessages()) {
+                    canProceed = false;
                     log.error("Config validation message: " + message.getMessage());
                 }
             }
@@ -276,9 +276,9 @@ public class SqoopWorker {
                         log.warn("Config Input Validation Warning: " + message.getMessage());
                     }
                 } else if (minput.getValidationStatus() == Status.ERROR) {
-                    canProceed = false;
                     // print every validation message
                     for (Message message : config.getValidationMessages()) {
+                        canProceed = false;
                         log.error("Config Input Validation Error: " + message.getMessage());
                     }
                 }
